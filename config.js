@@ -3,17 +3,17 @@ module.exports = {
     encoding: "utf8",// "ascii",
 
     // Dexcalibur src location
-    dexcaliburPath: "/home/example/dexcalibur/src",
+    dexcaliburPath: "/Users/patrickamrein/Documents/Ubique/dexcalibur/src",
     
     // workspace location : folder where analyzed APK and data are stored
-    workspacePath: "/home/example/workspace/", 
+    workspacePath: "/Users/patrickamrein/Documents/dexcalibur_workspace", 
     
     // ADB location
-    adbPath: "/home/example/Android/Sdk/platform-tools/adb",
-    androidSdkPath: "/home/example/Android/Sdk/",
+    adbPath: "/usr/local/bin/adb",
+    androidSdkPath: "/Users/patrickamrein/Library/Android/sdk",
 
     // APKTool location
-    apktPath: "/home/example/tools/apktool",
+    apktPath: "/Users/patrickamrein/Documents/frida_tests/apktool",
 
     // Optional : SDB location
     sdbPath: null,
