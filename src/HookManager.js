@@ -1165,11 +1165,7 @@ HookManager.prototype.start = function(hook_script){
             pid = applications[0].pid; 
         }
         else {
-<<<<<<< HEAD
             pid = yield device.spawn([APP]);
-=======
-            const pid = yield device.spawn([APP]);
->>>>>>> master
             console.log('spawned:', pid);
         }
         
