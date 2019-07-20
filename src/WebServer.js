@@ -255,6 +255,15 @@ class WebServer {
                 $.project.changeProject(req.params.packageIdentifier);
                 res.status(200).send(JSON.stringify({message: "ok"}));
             });
+            this.app.route('/api/patchProject/:packageIdentifier')
+            .get(function(req,res){
+                // scan connected devices
+                //console.log(req.params.packageIdentifier)
+                $.project.packagePatcher.patchPackage(req.params.packageIdentifier);
+                // collect
+                //$.project.changeProject(req.params.packageIdentifier);
+                res.status(200).send(JSON.stringify({message: "ok"}));
+            });
 
         // not used
         this.app.route('/api/stats')

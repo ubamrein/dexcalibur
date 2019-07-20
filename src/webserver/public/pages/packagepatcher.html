@@ -206,8 +206,11 @@
             });
         });
         $('#dataTables-example tbody').on('click', 'button.patch-apk', function () {
-            //let id = $(this).attr("package");
-            //location.href = "/api/patchProject/" + id;
+            let id = $(this).attr("package");
+            $(this).parent().replaceWith(`<div class="pulsating-circle"></div>`);
+            $.getJSON("/api/patchProject/" + id, function(success) {
+                dmTable.ajax.reload();
+            });
         });
         $('#dataTables-example tbody').on('click', 'button.change-workspace', function () {
             let id = $(this).attr("package");
