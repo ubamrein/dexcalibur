@@ -177,7 +177,8 @@
                 },
                 {
                     render: function(data, type, row, meta) {
-                        return `&nbsp;<button style="height:1.5em;padding-top:0px;padding-bottom:0px;" class="btn btn-success patch-apk" package="`+row.packageIdentifier+`">Patch</button>`;
+                        var disabled = row.workspaceExists? "" : "disabled";
+                        return `&nbsp;<button style="height:1.5em;padding-top:0px;padding-bottom:0px;" class="btn btn-success patch-apk" package="${row.packageIdentifier}" ${disabled}>Patch</button>`;
                     }
                 }
             ],
