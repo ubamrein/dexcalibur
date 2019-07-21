@@ -130,7 +130,7 @@ GraphMaker.prototype.callgraph_from = function(obj, n=1, m=2){
                 meth = this.context.find.get.method(i);
                 if(meth === undefined){
                     console.error(i + ' cannot be  found');
-                    var sigReg = new RegExp(/(?<full_name>(?<class>[A-z0-9_-]*\.)*)(?<callSignature>(?<function_name>[A-z0-9-_]*)\((?:[\<A-z.\>]*)\)\<[A-z]*\>)/);
+                    var sigReg = new RegExp(/(?<full_name>(?<class>[A-z0-9_-]*\.)*)(?<callSignature>(?<function_name>[A-z0-9-_]*)\((?:[\<A-z.\>]*)\)\<[A-z._0-9\-]*\>)/);
                     var match = sigReg.exec(i);
                     tree.children.push({
                         fqcn: i,
