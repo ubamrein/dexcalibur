@@ -2,6 +2,8 @@ const Adb = require('./AdbWrapper.js');
 const Path = require('path');
 const Process = require('child_process');
 const fs = require('fs');
+const https = require('https');
+const lzma = require('lzma-native');
 
 class PackagePatcher {
     constructor(pkgName,config=null, apkHelper) {
@@ -43,6 +45,7 @@ class PackagePatcher {
             }
             //now we need to inject the smali code 
             this.injectSmaliCode(mainActivityFile);
+            this.putFridaGadget(packageIdentifier);
             //patch the manifest
             manifest = this.setApkAsDebuggable(manifest);
             manifest = this.setBackup(manifest);
@@ -53,11 +56,61 @@ class PackagePatcher {
             console.log(manifest);
         }
     }
+/**
+ * 
+ * @param {*} fridaVersion  frida-gadget version
+ * @param {*} arch  the target ABI
+ * @param {*} platform for now only android
+ */
+    getFridaDownloadLink(abi, fridaVersion = "12.6.6", platform = "android" )
+    {
+        var arch = abi;
+        if(abi == "armeabi-v7a") {
+            arch = "arm";
+        } else if (abi == "arm64-v8a"){
+            arch = "arm64";
+        }
+        
+        return `https://github.com/frida/frida/releases/download/${fridaVersion}/frida-gadget-${fridaVersion}-${platform}-${arch}.so.xz`;
+    }
     /**
      * Download frida-gadget and put it into the ABI specific folders
+     * @param {*} packageIdentifier The package we are intersted in
      */
-    putFridaGadget() {
-
+    putFridaGadget(packageIdentifier) {
+        /**
+         * We probably should also put the ones for the emulator
+         * lib/armeabi-v7a
+         * lib/arm64-v8a
+         * lib/x86
+         * lib/x86_64
+         */
+        var abis = ["armeabi-v7a", "arm64-v8a","x86","x86_64"];
+        var libDir = Path.join(this.config.workspacePath, packageIdentifier, "dex", "lib");
+        if(!fs.existsSync(libDir)){
+            fs.mkdirSync(libDir);
+        }
+        
+        for(let abi in abis){
+            if(!fs.existsSync(Path.join(libDir, abis[abi]))) {
+                fs.mkdirSync(Path.join(libDir, abis[abi]));
+            }
+            const file = fs.createWriteStream(Path.join(libDir,abis[abi],"libfrida-gadget.so"));
+            
+            const request = https.get(this.getFridaDownloadLink(abis[abi]), function(response) {
+                if(response.statusCode == 302 || response.statusCode == 301) {
+                    console.log(response.headers.location);
+                    https.get(response.headers.location, function(resp) {
+                        var compressor = lzma.createDecompressor();
+                        resp.pipe(compressor).pipe(file);
+                        file.on('finish', function() {
+                          file.close();  // close() is async, call cb after close completes.
+                        });
+                    })
+                }
+             
+            });
+        }
     }
     /**
      * 
