@@ -128,7 +128,20 @@ GraphMaker.prototype.callgraph_from = function(obj, n=1, m=2){
             tree.children = [];
             for(let i in obj._useMethod){
                 meth = this.context.find.get.method(i);
-
+                if(meth === undefined){
+                    console.error(i + ' cannot be  found');
+                    var sigReg = new RegExp(/(?<full_name>(?<class>[A-z0-9_-]*\.)*)(?<callSignature>(?<function_name>[A-z0-9-_]*)\((?:[\<A-z.\>]*)\)\<[A-z]*\>)/);
+                    var match = sigReg.exec(i);
+                    tree.children.push({
+                        fqcn: i,
+                        tags: [],
+                        class:match.groups["full_name"].slice(0,-1),
+                        classname:match.groups["class"].slice(0,-1), // the last character is a dot
+                        name:match.groups["function_name"],
+                        callsignature: match.groups["callSignature"]
+                    });
+                    continue;
+                }
                 if(n<m)
                     tree.children.push(this.callgraph_from(this.context.find.get.method(i),n+1));
                 else    
@@ -143,9 +156,6 @@ GraphMaker.prototype.callgraph_from = function(obj, n=1, m=2){
             }
         }
     }
-
-    console.log(tree);
-
     return tree;
 }
 
