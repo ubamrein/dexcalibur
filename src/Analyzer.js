@@ -624,7 +624,7 @@ function MakeMap(data,absoluteDB){
             console.error(ex);
         }
         }
-        else if(cls.getSuperClass() != null && (!cls.getSuperClass() instanceof CLASS.Class)){
+        else if(cls.getSuperClass() != null && !(cls.getSuperClass() instanceof CLASS.Class)){
             cls.extends = Resolver.type(absoluteDB, cls.extends);
             
             //cls.extends = Resolver.type(data, cls.extends);
