@@ -42,6 +42,10 @@ module.exports = {
         console.log(Chalk.yellow('[INFO] '+prefix.join("")+multi_concat(arguments)));
         return callbacks;
     },
+    warn: function(msg) {
+        console.log(Chalk.yellow('[WARN] '+prefix.join("")+multi_concat(arguments)));
+        return callbacks;
+    },
     pop: function(){
         return prefix.pop()
     },
