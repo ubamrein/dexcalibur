@@ -230,9 +230,26 @@ class WebServer {
             });
             this.app.route('/api/packageList')
             .get(function(req,res){
-                // scan connected devices
-                $.project.packagePatcher.scan();
-                // collect
+                //we need to clear the available packages, since otherwise we list stuff which might 
+                //already be gone
+                $.project.packagePatcher.clear();
+                
+                // scan connected devices (this failes if there are no devices connected)
+                try {
+                    $.project.packagePatcher.scan();
+                    // collect
+                    
+                }
+                catch(ex) {
+                    console.error(ex);
+                }
+
+                
+                //add projects in the workspace if they are not already on the device
+                //or the device is not connected
+
+                $.project.packagePatcher.scanWorkspace();
+
                 let packages = {
                     data: $.project.packagePatcher.toJsonObject()
                 };

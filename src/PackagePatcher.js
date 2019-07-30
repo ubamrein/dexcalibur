@@ -1,6 +1,7 @@
 const Adb = require('./AdbWrapper.js');
 const Path = require('path');
 const Process = require('child_process');
+var Package = require('./AppPackage');
 const fs = require('fs');
 const https = require('https');
 const lzma = require('lzma-native');
@@ -203,6 +204,36 @@ class PackagePatcher {
         var pathResult = this.Bridges.ADB.getPackagePath(packageIdentifier);
         this.Bridges.ADB.pull(pathResult, tmpPath);
         this.apkHelper.extract(tmpPath, dstPath, true);
+    }
+
+    clear() {
+        this.packages = [];
+    }
+
+    scanWorkspace() {
+        var workspacePath = this.config.workspacePath;
+        var dirs = fs.readdirSync(workspacePath);
+        for(var dir in dirs) {
+            var packageDir = Path.join(workspacePath, dirs[dir]);
+            if(!fs.lstatSync(packageDir).isDirectory()) {
+                continue;
+            }
+            if(fs.readdirSync(packageDir).includes("dex")) {
+                //this probably is an package dir
+                //check if it is already contained
+                if(dirs[dir] in this.packages) {
+                    continue;
+                }
+
+                var pkg = new Package({
+                    packageIdentifier: dirs[dir],
+                    packagePath:packageDir,
+                    workspaceExists : true,
+                    currentWd : dirs[dir] == this.currentPackageName
+                });
+                this.packages[pkg.packageIdentifier] = pkg;
+            }
+        }
     }
 
     scan(){
