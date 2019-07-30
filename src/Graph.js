@@ -131,13 +131,23 @@ GraphMaker.prototype.callgraph_from = function(obj, n=1, m=2){
                 if(meth === undefined){
                     console.error(i + ' cannot be  found');
                     var sigReg = new RegExp(/(?<full_name>(?<class>[A-z0-9_\-$]*\.)*)(?<callSignature>(?<function_name>[A-z0-9\-_$]*)\((?:[\<A-z.$\>]*)\)\<[A-z._0-9\-$]*\>)/);
+                    
+                    if(!sigReg.test(i)) {
+                        console.error(i + " something wrong");
+                        continue;
+                    }
+
                     var match = sigReg.exec(i);
+                    var full_name = match.groups["full_name"] !== undefined?match.groups["full_name"].slice(0,-1) : "";
+                    var cls = match.groups["class"] !== undefined?match.groups["class"].slice(0,-1) : "";
+                    var n = match.groups["function_name"] !== undefined?match.groups["function_name"] : "";
+                
                     tree.children.push({
                         fqcn: i,
                         tags: [],
-                        class:match.groups["full_name"].slice(0,-1),
-                        classname:match.groups["class"].slice(0,-1), // the last character is a dot
-                        name:match.groups["function_name"],
+                        class: full_name,
+                        classname:cls, // the last character is a dot
+                        name:n,
                         callsignature: match.groups["callSignature"]
                     });
                     continue;
