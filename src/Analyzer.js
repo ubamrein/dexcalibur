@@ -9,8 +9,9 @@ var CONST = require("./CoreConst.js");
 var VM = require("./VM.js");
 var OPCODE = require("./Opcode.js");
 const AnalysisHelper = require("./AnalysisHelper.js");
+const AndroidManifestXmlParser = require("./AndroidManifestXmlParser.js");
 const MemoryDb = require("./InMemoryDb.js");
-
+const Event = require("./Event.js").Event;
 
 var Parser = require("./SmaliParser.js");
 
@@ -864,6 +865,13 @@ class AnalyzerDatabase
         this.db.newCollection("datablock");
         this.db.newCollection("tagcategories");
 
+        this.db.newIndex("activities");
+        this.db.newIndex("receivers");
+        this.db.newIndex("services");
+        this.db.newIndex("providers");
+        this.db.newIndex("permissions");
+
+
         this.classes = this.db.getIndex("classes");
         this.fields = this.db.getIndex("fields");
         this.methods = this.db.getIndex("methods");
@@ -880,10 +888,26 @@ class AnalyzerDatabase
         this.datablock = this.db.getIndex("datablock");
         this.tagcategories = this.db.getIndex("tagcategories");
         this.syscalls = this.db.getIndex("syscalls");
+
+        this.activities = this.db.getIndex("activities");
+        this.receivers = this.db.getIndex("receivers");
+        this.services = this.db.getIndex("services");
+        this.providers = this.db.getIndex("providers");
+        this.permissions = this.db.getIndex("permissions");
+
+        this.manifest = null;
     }
 
     getDatabase(){
         return this.db;
+    }
+
+    setManifest(manifest){
+        this.manifest = manifest;
+    }
+
+    getManifest(){
+        return this.manifest;
     }
 }
 
@@ -897,49 +921,11 @@ class AnalyzerDatabase
 function Analyzer(encoding, finder, ctx=null){
     SmaliParser.setContext(ctx);
 
-    var db = this.db = new AnalyzerDatabase(ctx);/*{
-        classesCtr: 0,
-        classes: {},
-        fieldsCtr: 0,
-        fields: {},
-        methodsCtr: 0,
-        methods: {},
-        call: [],
-        unmapped: [],
-        notbinded: [],
-        notloaded: [],
-        strings: [],
-        packages: [],
-        syscalls: [],
-        missing: [],
-        parseErrors: [],
-        files: [],
-        buffers: [],
-        datablock: [],
-        tagcategories: []
-    };*/
+    var db = this.db = new AnalyzerDatabase(ctx);
 
-    let tempDb = this.tempDb = new AnalyzerDatabase(ctx); /*{
-        classesCtr: 0,
-        classes: {},
-        fieldsCtr: 0,
-        fields: {},
-        methodsCtr: 0,
-        methods: {},
-        call: [],
-        unmapped: [],
-        notbinded: [],
-        notloaded: [],
-        missing: [],
-        parseErrors: [],
-        strings: [],
-        packages: [],
-        files: [],
-        buffers: [],
-        datablock: [],
-        tagcategories: []
-    }*/
+    let tempDb = this.tempDb = new AnalyzerDatabase(ctx); 
 
+    this.context = ctx;
     this.finder = finder;
 
     var config = {
@@ -949,32 +935,6 @@ function Analyzer(encoding, finder, ctx=null){
 
     this.newTempDb = function(){
         return new AnalyzerDatabase(ctx);
-/*        return {
-            classesCtr: 0,
-            classes: {},
-            
-            fieldsCtr: 0,
-            fields: {},
-            
-            methodsCtr: 0,
-            methods: {},
-
-            call: [],
-            unmapped: [],
-
-            notbinded: [],
-            notloaded: [],
-            
-            strings: [],
-            packages: [],
-            
-            missing: [],
-            parseErrors: [],
-            files: [],
-            buffers: [],
-            datablock: [],
-            tagcategories: []
-        };*/
     }
 
     this.file = function(filePath, filename, force=false){
@@ -1007,6 +967,16 @@ function Analyzer(encoding, finder, ctx=null){
 
 
     this.path = function(path){
+        
+        ctx.bus.send(new Event({
+            name: "analyze.file.before",
+            data: {
+                path: path,
+                analyzer: this
+            }
+        }));
+
+
         tempDb = this.newTempDb();
 
         // TODO : hcek if path exists;
@@ -1024,6 +994,14 @@ function Analyzer(encoding, finder, ctx=null){
         // start object mapping
         // MakeMap(this.db);
         MakeMap(tempDb, this.db);
+        
+        ctx.bus.send(new Event({
+            name: "analyze.file.after",
+            data: {
+                path: path,
+                analyzer: this
+            }
+        }));
 
         this.finder.updateDB(this.db);
     };
@@ -1037,7 +1015,70 @@ function Analyzer(encoding, finder, ctx=null){
     }
 }
 
+/**
+ * To get the absolute DB 
+ * @returns {AnalyzerDatabase} DB instance
+ */
+Analyzer.prototype.getInternalDB = function(){
+    return this.db;
+}
 
+/**
+ * To parse the AndroidManifest and update the DB
+ * @param {String|Path} path Android manifest path 
+ */
+Analyzer.prototype.scanManifest = function(path){
+    let self = this;
+    fs.exists(path,function(res){
+        if(!res) return;
+
+        fs.readFile(path, (err,data)=>{
+            if(err){
+                console.log(Chalk.bold.red("Android Manifest cannot be read : ",err));
+                return;
+            }
+            if(data == null || data.toString('ascii',0,5)!=="<?xml"){
+                // it happens if resources have not been extracted
+                console.log(Chalk.bold.red("Android Manifest cannot be analyzed because the workspace has been built by using a previous version of Dexcalibur.",err));
+                return;
+            }
+
+            let amp = new AndroidManifestXmlParser(self);
+            amp.parse(data, function(err,manifest){
+                // update internal DB
+                
+                manifest.usesPermissions.map(x => self.db.permissions.insert(x));
+                manifest.application.activities.map(x => self.db.activities.insert(x));
+                manifest.application.providers.map(x => self.db.providers.insert(x));
+                manifest.application.receivers.map(x => self.db.receivers.insert(x));
+                manifest.application.services.map(x => self.db.services.insert(x));
+                
+                // resolve class reference
+                /*self.db.activities.map((x,a) => {
+                    let u = self.db.classes.getEntry(a.getName());
+                    if(u == null){
+                        self.context.bus.send(new Event({
+                            type: "manifest.unknow.activity",
+                            data: a
+                        }));
+                    }else
+                        a.setActivityClass(u);
+                });*/
+                /*
+                let actlist = self.db.activities;
+                for(let i=0; i<actlist.size(); i++){
+                    actlist.getEntry(i).ref = self.db.classes.getEntry(
+                        actlist.getEntry(i).getName()
+                    );
+                }*/
+            });
+
+           
+
+        });
+    
+    });
+}
 
 Analyzer.prototype.addClassFromFqcn = function(fqcn){
     let pkg = null;

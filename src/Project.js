@@ -312,6 +312,8 @@ Project.prototype.fullscan = function(path){
     if(path !== undefined){   
         this.analyze.path( path);
         this.dataAnalyser.scan( path, ["smali"]);
+        
+        this.analyze.scanManifest(Path.join(path,"AndroidManifest.xml"));
     }else{
         //        let dexPath = this.workspace.getWD()+"dex";
         let dexPath = Path.join(this.workspace.getWD(),"dex");
@@ -320,8 +322,10 @@ Project.prototype.fullscan = function(path){
         
         this.analyze.path( dexPath);
         this.dataAnalyser.scan( dexPath, ["smali"]);
-
+        this.analyze.scanManifest(Path.join(dexPath,"AndroidManifest.xml"));
     }
+
+
 
 
     // index static array 
@@ -361,13 +365,12 @@ Project.prototype.fullscan = function(path){
         type: "dxc.fullscan.post" 
     }));
 
-
     // deploy inspector's hooksets
     this.inspectors.deployAll();
     
     // trigger event
     this.bus.send(new Event.Event({
-        type: "appview.new" 
+        type: "dxc.appview.new" 
     }));
 
     this.analyze.insertIn( "files", this.dataAnalyser.getDB().getFiles());
@@ -464,7 +467,7 @@ Project.prototype.pull = function(device){
         Process.execSync(adb+" pull "+ppath+" "+pathWD+".apk");
         console.log(Chalk.bold.green("[*] Package downloaded to "+pathWD+".apk"));
 
-        ret = Process.execSync(this.config.apktPath+" d -f -m -r -o "+dexPath+" "+pathWD+".apk").toString("ascii");
+        ret = Process.execSync(this.config.apktPath+" d -f -m -o "+dexPath+" "+pathWD+".apk").toString("ascii");
         console.log(Chalk.bold.green("[*] APK decompiled in "+dexPath));
     }
     catch(exception) {
